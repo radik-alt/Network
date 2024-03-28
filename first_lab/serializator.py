@@ -13,12 +13,21 @@ class BookLoverSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookLover
         fields = '__all__'
+        extra_kwargs = {
+            'first_name': {'required': False},
+            'last_name': {'required': False},
+            'middle_name': {'required': False},
+            'birthday': {'required': False},
+            'date_of_joining': {'required': False},
+            'address': {'required': False},
+            'phone': {'required': False},
+        }
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']  # Поля, которые вы хотите включить в сериализацию
+        fields = ['id', 'username', 'email', 'password']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):

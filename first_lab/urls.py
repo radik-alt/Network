@@ -34,7 +34,8 @@ urlpatterns = [
          'delete': 'delete'}
     ), name='book-lovers-details'),
     path('booklovers/', BookLoverViewSet.as_view(
-        {'get': 'get'}
+        {'get': 'get',
+         'post': 'create'}
     ), name='book-lovers'),
     path('auth/login/', AuthViewSet.as_view({'post': 'login'}), name='login'),
     path('auth/register/', AuthViewSet.as_view({'post': 'register'}), name='register'),
