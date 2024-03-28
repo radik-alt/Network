@@ -1,7 +1,6 @@
 from django.contrib.auth import authenticate
-from django.http import HttpResponse
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status, viewsets, filters
+from django.http import HttpResponse, Http404
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
@@ -15,23 +14,52 @@ from first_lab.serializator import RegionSerializer, BookLoverSerializer, UserSe
 
 
 def index(request):
-    regions = Region.objects.all()
-    print(regions.values())
-
     return HttpResponse("Hello world!")
 
 
 class RegionViewSet(viewsets.ViewSet):
 
-    def get(self, request):
+    def get_ordering(self, request):
+        try:
+            return request.GET.get('ordering')
+        except Exception:
+            return None
+
+    def get_pagination(self, request):
         try:
             page = int(request.GET.get('page'))
             page_size = int(request.GET.get('pagesize'))
-        except:
+            return {'page': page, 'page_size': page_size}
+        except Exception:
+            return None
+
+    def get_filter_region_name(self, request):
+        try:
+            return request.GET.get('name')
+        except Exception:
+            return None
+
+    def get(self, request):
+        pagination_data = self.get_pagination(request)
+        if pagination_data:
+            page = pagination_data['page']
+            page_size = pagination_data['page_size']
+        else:
             page = None
             page_size = None
 
         queryset = Region.objects.all()
+        ordering = self.get_ordering(request)
+        name_region = self.get_filter_region_name(request)
+
+        if name_region:
+            queryset = queryset.filter(name=name_region)
+
+        if ordering == 'asc':
+            queryset = queryset.order_by('code')
+        elif ordering == 'desc':
+            queryset = queryset.order_by('-code')
+
         paginator = MyModelPagination(page, page_size)
         result_page = paginator.paginate_queryset(queryset, request)
         serializer = RegionSerializer(result_page, many=True)
@@ -53,7 +81,7 @@ class RegionViewSetById(viewsets.ViewSet):
         try:
             return Region.objects.get(pk=pk)
         except Region.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            raise Http404
 
     def get(self, request, pk):
         queryset = self.get_object(pk)
@@ -80,33 +108,80 @@ class MyModelPagination(PageNumberPagination):
         if page is not None:
             self.page = page
         else:
-            self.page = 10
+            self.page = 1
 
         if page_size is not None:
             self.page_size = page_size
         else:
-            self.page_size = 100
+            self.page_size = 10
 
-    page = 10
+    page = 1
     page_size_query_param = 'page_size'
-    page_size = 100
+    page_size = 10
 
 
 class BookLoverViewSet(viewsets.ViewSet):
 
-    def get(self, request):
+    def get_ordering(self, request):
+        try:
+            return request.GET.get('ordering')
+        except Exception:
+            return None
+
+    def get_filter_first_name(self, request):
+        try:
+            return request.GET.get('first_name')
+        except Exception:
+            return None
+
+    def get_filter_birthday(self, request):
+        try:
+            return request.GET.get('birthday')
+        except Exception:
+            return None
+
+    def get_filter_date_of_joining(self, request):
+        try:
+            return request.GET.get('date_of_joining')
+        except Exception:
+            return None
+
+    def get_pagination(self, request):
         try:
             page = int(request.GET.get('page'))
             page_size = int(request.GET.get('pagesize'))
-        except:
+            return {'page': page, 'page_size': page_size}
+        except Exception:
+            return None
+
+    def get(self, request):
+        pagination_data = self.get_pagination(request)
+        if pagination_data:
+            page = pagination_data['page']
+            page_size = pagination_data['page_size']
+        else:
             page = None
             page_size = None
 
-        filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-        filterset_fields = ['name', 'age']  # Поля для фильтрации
-        ordering_fields = ['name', 'age']  # Поля для сортировки
+        filter_birthday = self.get_filter_birthday(request)
+        filter_date_of_joint = self.get_filter_date_of_joining(request)
+        filter_first_name = self.get_filter_first_name(request)
+        ordering = self.get_ordering(request)
 
         queryset = BookLover.objects.all()
+
+        if filter_first_name:
+            queryset = queryset.filter(first_name=filter_first_name)
+        elif filter_birthday:
+            queryset = queryset.filter(birthday=filter_birthday)
+        elif filter_date_of_joint:
+            queryset = queryset.filter(birthday=filter_date_of_joint)
+
+        if ordering == 'asc':
+            queryset = queryset.order_by('birthday')
+        elif ordering == 'desc':
+            queryset = queryset.order_by('-birthday')
+
         paginator = MyModelPagination(page, page_size)
         result_page = paginator.paginate_queryset(queryset, request)
         serializer = BookLoverSerializer(result_page, many=True)
@@ -114,14 +189,14 @@ class BookLoverViewSet(viewsets.ViewSet):
 
 
 class BookLoverViewSetById(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     @staticmethod
     def get_object(pk):
         try:
             return BookLover.objects.get(pk=pk)
-        except Region.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except BookLover.DoesNotExist:
+            raise Http404
 
     def get(self, request, pk):
         queryset = self.get_object(pk)
@@ -167,8 +242,49 @@ class AuthViewSet(viewsets.ViewSet):
 class PublisherViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def get_ordering(self, request):
+        try:
+            return request.GET.get('ordering')
+        except Exception:
+            return None
+
+    def get_filter_name(self, request):
+        try:
+            return request.GET.get('name')
+        except Exception:
+            return None
+
+    def get_pagination(self, request):
+        try:
+            page = int(request.GET.get('page'))
+            page_size = int(request.GET.get('pagesize'))
+            return {'page': page, 'page_size': page_size}
+        except Exception:
+            return None
+
     def list(self, request):
+        ordering = self.get_ordering(request)
+        filter_name = self.get_filter_name(request)
+        pagination_data = self.get_pagination(request)
+        if pagination_data:
+            page = pagination_data['page']
+            page_size = pagination_data['page_size']
+        else:
+            page = None
+            page_size = None
+
         queryset = Publisher.objects.all()
+
+        if filter_name:
+            queryset = queryset.filter(name=filter_name)
+
+        if ordering == 'asc':
+            queryset = queryset.order_by('region')
+        elif ordering == 'desc':
+            queryset = queryset.order_by('-region')
+
+        paginator = MyModelPagination(page, page_size)
+        result_page = paginator.paginate_queryset(queryset, request)
         serializer = PublisherSerializer(queryset, many=True)
         return Response(serializer.data)
 

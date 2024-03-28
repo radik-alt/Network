@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_jwt',
+    'drf_yasg'
 ]
 
 # Настройки для JWT токенов
@@ -54,7 +55,7 @@ JWT_AUTH = {
     'JWT_SECRET_KEY': 'your-secret-key',
     'JWT_ALGORITHM': 'HS256',
     'ACCESS_TOKEN_LIFETIME': datetime.timedelta(minutes=15),  # Время жизни токена доступа (15 минут)
-    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=1),     # Время жизни токена обновления (1 день)
+    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=1),  # Время жизни токена обновления (1 день)
 }
 
 MIDDLEWARE = [
