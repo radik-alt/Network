@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from django.http import HttpResponse, Http404
 from rest_framework import status, viewsets
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
@@ -122,31 +123,36 @@ class MyModelPagination(PageNumberPagination):
 
 class BookLoverViewSet(viewsets.ViewSet):
 
-    def get_ordering(self, request):
+    @staticmethod
+    def get_ordering(request):
         try:
             return request.GET.get('ordering')
         except Exception:
             return None
 
-    def get_filter_first_name(self, request):
+    @staticmethod
+    def get_filter_first_name(request):
         try:
             return request.GET.get('first_name')
         except Exception:
             return None
 
-    def get_filter_birthday(self, request):
+    @staticmethod
+    def get_filter_birthday(request):
         try:
             return request.GET.get('birthday')
         except Exception:
             return None
 
-    def get_filter_date_of_joining(self, request):
+    @staticmethod
+    def get_filter_date_of_joining(request):
         try:
             return request.GET.get('date_of_joining')
         except Exception:
             return None
 
-    def get_pagination(self, request):
+    @staticmethod
+    def get_pagination(request):
         try:
             page = int(request.GET.get('page'))
             page_size = int(request.GET.get('pagesize'))
@@ -233,10 +239,47 @@ class AuthViewSet(viewsets.ViewSet):
         password = request.data.get('password')
         user = authenticate(username=username, password=password)
         if user:
+            Token.objects.get_or_create(user=user)
             refresh = RefreshToken.for_user(user)
             return Response({'refresh': str(refresh), 'access': str(refresh.access_token)})
         else:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Некорректные данные. Проверьте логин и пароль'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def logout(self, request):
+        try:
+            request.user.auth_token.delete()
+            return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({'message': 'UNAUTHORIZED'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    def get_password(self, request):
+        try:
+            old_password = request.data.get('old_password')
+            new_password = request.data.get('new_password')
+            return {"old_password": old_password, "new_password": new_password}
+        except Exception:
+            raise Http404
+            # return {"old_password": None, "new_password": None}
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def change_password(self, request):
+        try:
+            user = request.user
+            passwords = self.get_password(request)
+            old_password = passwords.get('old_password')
+            new_password = passwords.get('new_password')
+
+            if not user.check_password(old_password):
+                return Response({'error': 'Invalid old password'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(new_password)
+            user.save()
+
+            return Response({'message': 'Password successfully changed'}, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({'error': 'Invalid old password'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PublisherViewSet(viewsets.ViewSet):

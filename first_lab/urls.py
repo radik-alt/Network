@@ -38,6 +38,8 @@ urlpatterns = [
     ), name='book-lovers'),
     path('auth/login/', AuthViewSet.as_view({'post': 'login'}), name='login'),
     path('auth/register/', AuthViewSet.as_view({'post': 'register'}), name='register'),
+    path('auth/changepassword/', AuthViewSet.as_view({'post': 'change_password'}), name='change_password'),
+    path('auth/logout/', AuthViewSet.as_view({'post': 'logout'}), name='logout'),
     path('publishers/', PublisherViewSet.as_view(
         {'get': 'list',
          'post': 'create'}
