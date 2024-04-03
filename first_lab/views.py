@@ -22,13 +22,15 @@ def index(request):
 
 class RegionViewSet(viewsets.ViewSet):
 
-    def get_ordering(self, request):
+    @staticmethod
+    def get_ordering(request):
         try:
             return request.GET.get('ordering')
         except Exception:
             return None
 
-    def get_pagination(self, request):
+    @staticmethod
+    def get_pagination(request):
         try:
             page = int(request.GET.get('page'))
             page_size = int(request.GET.get('pagesize'))
@@ -36,12 +38,19 @@ class RegionViewSet(viewsets.ViewSet):
         except Exception:
             return None
 
-    def get_filter_region_name(self, request):
+    @staticmethod
+    def get_filter_region_name(request):
         try:
             return request.GET.get('name')
         except Exception:
             return None
 
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('ordering', openapi.IN_QUERY, description="Ordering (asc or desc)", type=openapi.TYPE_STRING),
+        openapi.Parameter('name', openapi.IN_QUERY, description="Filter by name", type=openapi.TYPE_STRING),
+        openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER),
+        openapi.Parameter('pagesize', openapi.IN_QUERY, description="Page size", type=openapi.TYPE_INTEGER),
+    ], responses={200: BookSerializer()})
     def get(self, request):
         pagination_data = self.get_pagination(request)
         if pagination_data:
@@ -86,6 +95,7 @@ class RegionViewSetById(viewsets.ViewSet):
         except Region.DoesNotExist:
             raise Http404
 
+    @swagger_auto_schema(responses={200: RegionSerializer()})
     def get(self, request, pk):
         queryset = self.get_object(pk)
         serializer = RegionSerializer(queryset)
@@ -522,7 +532,8 @@ class BookViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def destroy(self, request, pk):
+        queryset = Book.objects.all()
+        instance = get_object_or_404(queryset, pk =pk)
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
